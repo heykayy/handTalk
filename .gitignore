@@ -1,0 +1,99 @@
+# ─── Trained models ───────────────────────────────────────────
+*.keras
+*.h5
+*.tflite
+*.pb
+
+# ─── Label maps ───────────────────────────────────────────────
+*.json
+
+# ─── Dataset & cache folders ──────────────────────────────────
+data/
+dataset/
+isl_word/
+isl_sentence/
+downloads/
+landmark_cache/
+sentence/landmark_cache_v2/
+
+# ─── Training plots & images ──────────────────────────────────
+word/plots/
+sentence/plots/
+*.png
+*.jpg
+*.jpeg
+!assets/*.png
+!assets/*.jpg
+
+# ─── Saved screenshots ────────────────────────────────────────
+saved_predictions/
+
+# ─── Jupyter Notebook checkpoints ─────────────────────────────
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# ─── Python cache & build artifacts ───────────────────────────
+__pycache__/
+sentence/__pycache__/
+word/__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# ─── Numpy arrays ─────────────────────────────────────────────
+*.npy
+
+# ─── Virtual environments ─────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-env/
+
+# ─── IDE / editor files ───────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ─── OS generated files ───────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+tensorboard_logs/
+tb_logs/
+
+# ─── Misc ─────────────────────────────────────────────────────
+*.csv
+*.zip
+*.tar.gz
+*.rar
+.env
+.env.*
