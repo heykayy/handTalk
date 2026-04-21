@@ -1,6 +1,6 @@
-# ISL Real-Time Translator
+# HandTalk-INDIA : ISL Real-Time Translator
 
-A real-time **HandTalk India : Indian Sign Language (ISL) recognition system** built with TensorFlow, MediaPipe, and OpenCV.  
+A real-time **HandTalk-INDIA : Indian Sign Language (ISL) recognition system** built with TensorFlow, MediaPipe, and OpenCV.  
 It runs entirely on CPU and supports two detection modes — letter-by-letter spelling and full-sentence signing.
 
 ---
@@ -194,4 +194,4 @@ MIT— free to use, modify, and distribute.
 
 ## Author
 
-Creator of **HandTalk India** : **heykayy** & **komal05-web**
+Creator of **HandTalk-INDIA** : **heykayy** & **komal05-web**
