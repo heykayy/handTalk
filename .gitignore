@@ -5,7 +5,7 @@
 *.pb
 
 # ─── Label maps ───────────────────────────────────────────────
-*.json
+settings.json
 
 # ─── Dataset & cache folders ──────────────────────────────────
 data/
