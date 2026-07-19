@@ -14,7 +14,7 @@
 # Output: dist/HandTalk-INDIA/  (zip this whole folder for a GitHub Release)
 # -----------------------------------------------------------------------------
 
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
 
 block_cipher = None
 
@@ -23,6 +23,16 @@ block_cipher = None
 # collected explicitly or the packaged app will crash with "file not found"
 # errors from inside mediapipe at runtime.
 mediapipe_datas = collect_data_files("mediapipe")
+
+# cv2 (opencv-python) ships compiled .pyd/.dll binaries and its own submodule
+# tree that PyInstaller's static analysis sometimes fails to trace,
+# resulting in "ModuleNotFoundError: No module named 'cv2'" at runtime even
+# though the build itself completes without error. Collecting these
+# explicitly (rather than relying on hiddenimports alone) forces PyInstaller
+# to actually bundle the real binaries.
+cv2_binaries   = collect_dynamic_libs("cv2")
+cv2_datas      = collect_data_files("cv2")
+cv2_submodules = collect_submodules("cv2")
 
 app_datas = [
     ("word/isl_final_model.keras", "word"),
@@ -34,14 +44,15 @@ app_datas = [
 a = Analysis(
     ["predict.py"],
     pathex=[],
-    binaries=[],
-    datas=mediapipe_datas + app_datas,
+    binaries=cv2_binaries,
+    datas=mediapipe_datas + cv2_datas + app_datas,
     hiddenimports=[
+        "cv2",
         "pyttsx3.drivers",
         "pyttsx3.drivers.sapi5",   # Windows TTS driver
         "pyttsx3.drivers.nsss",    # macOS TTS driver
         "pyttsx3.drivers.espeak",  # Linux TTS driver
-    ],
+    ] + cv2_submodules,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
