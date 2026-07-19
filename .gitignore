@@ -4,6 +4,11 @@
 *.tflite
 *.pb
 
+# --- Downloaded model weights (pulled from Hugging Face, see README) ---
+word/isl_final_model.keras
+word/isl_best_model.keras
+sentence/isl_sentence_model.keras
+
 # ─── Label maps ───────────────────────────────────────────────
 settings.json
 
@@ -40,6 +45,7 @@ word/__pycache__/
 *$py.class
 *.pyo
 *.pyd
+*.pyc
 *.so
 *.egg
 *.egg-info/

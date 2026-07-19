@@ -13,14 +13,27 @@ Changes from v1 (LSTM):
 """
 
 import tensorflow as tf
-from tensorflow.keras import layers, models
-from tensorflow.keras.optimizers import Adam
+try:
+    from tensorflow.keras import layers, models
+    from tensorflow.keras.optimizers import Adam
+except Exception:
+    from keras import layers, models
+    from keras.optimizers import Adam
+
+# ── Shared constants ──────────────────────────────────────────────────────────
+import os
+from app_paths import app_root
 
 # ── Shared constants ──────────────────────────────────────────────────────────
 SEQUENCE_LEN        = 45      # increased from 30 — captures slower signers better
 FEATURE_DIM         = 258     # left_hand(63) + right_hand(63) + pose(132)
-SENTENCE_MODEL_PATH = "C:\\Users\\kkani\\Documents\\py files\\ISL\\sentence\\isl_sentence_model.keras"
-SENTENCE_LABEL_PATH = "C:\\Users\\kkani\\Documents\\py files\\ISL\\sentence\\sentence_label_map.json"
+
+# Was previously hard-coded to a single developer's Windows path
+# (C:\Users\kkani\...), which only worked on that one machine. Now resolved
+# relative to the app root so it works from source, from any clone location,
+# and from a packaged desktop executable (see app_paths.py).
+SENTENCE_MODEL_PATH = os.path.join(app_root(), "sentence", "isl_sentence_model.keras")
+SENTENCE_LABEL_PATH = os.path.join(app_root(), "sentence", "sentence_label_map.json")
 
 
 def build_sentence_model(num_classes: int,

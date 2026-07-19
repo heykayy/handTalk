@@ -1,46 +1,6 @@
 """
 predict.py – ISL Real-Time Translator  |  Dual-Mode  (Bug-fixed v2)
 ====================================================================
-Bugs fixed vs previous version
---------------------------------
-  BUG 1 – Sentence mode: no landmark normalisation at inference
-           train_sentence.py normalises every sequence; predict.py was
-           passing raw landmarks to the model → train/inference mismatch
-           → poor sentence detection despite 84.77% validation accuracy.
-           FIX: normalise_sequence() now applied to every recorded sequence
-           before inference, identical to the training pipeline.
-
-  BUG 2 – model.predict() called every frame (word mode)
-           .predict() has heavy Python/TF graph overhead per call — at 30fps
-           this caused lag and frame drops.
-           FIX: replaced with model(inp, training=False) — the fast eager path.
-
-  BUG 3 – Double smoothing made letter commit take ~1 full second
-           PredictionSmoother (12 frames) + SentenceBuilder hold (18 frames)
-           stacked = 30 consecutive stable frames required before any letter
-           committed. Letters got missed constantly.
-           FIX: Smoother window reduced to 5 (just enough to kill flicker).
-                SentenceBuilder hold_frames reduced to 20 (was 18 on top of 12).
-                Net effect: letter commits after ~25 stable frames (~0.8s).
-
-  BUG 4 – Two-hand ROI destroyed letter classification
-           When both hands were visible, min/max(all_xs) spanned the full
-           width of both hands, producing a huge double-hand ROI that the
-           single-letter classifier couldn't interpret.
-           FIX: letter classification now uses only the PRIMARY hand
-           (the one closest to frame centre). Second hand landmarks are still
-           drawn for visual feedback but excluded from the ROI.
-
-  BUG 5 – Stale label persisted when confidence dropped
-           When conf < threshold, smoother was reset but current_label and
-           current_conf kept their old values, showing a ghost prediction.
-           FIX: current_label and current_conf are explicitly reset to
-           "-" / 0.0 whenever confidence falls below threshold.
-
-  BUG 6 – Confidence threshold too high (0.70)
-           With real webcam variation and 50-image training, 0.70 rejected
-           too many valid signs, showing "?" most of the time.
-           FIX: CONFIDENCE_THRESHOLD lowered to 0.60.
 
 Controls
 --------
@@ -87,10 +47,10 @@ from sentence.sentence_model import (
 # ── MediaPipe ─────────────────────────────────────────────────────────────────
 try:
     import mediapipe as mp
-    _mp_hands    = mp.solutions.hands
-    _mp_holistic = mp.solutions.holistic
-    _mp_draw     = mp.solutions.drawing_utils
-    _mp_styles   = mp.solutions.drawing_styles
+    _mp_hands    = mp.solutions.hands  # type: ignore
+    _mp_holistic = mp.solutions.holistic  # type: ignore
+    _mp_draw     = mp.solutions.drawing_utils  # type: ignore
+    _mp_styles   = mp.solutions.drawing_styles  # type: ignore
 except Exception as e:
     print(f"[ERROR] MediaPipe import failed: {e}")
     sys.exit(1)
@@ -165,11 +125,28 @@ class ThreadedCapture:
 
 
 class TTSWorker:
+    """
+    Bug-fixed v2.
+
+    The old implementation created ONE pyttsx3 engine in __init__ and then
+    called engine.say()/engine.runAndWait() on that same instance for every
+    utterance. This is a well-known pyttsx3 failure mode: runAndWait()
+    reliably produces audio the *first* time it is called on an engine, but
+    on every call after that the engine's internal run-loop does not restart
+    cleanly (this is especially bad with the Windows SAPI5 driver, but also
+    shows up with espeak on Linux) — so the first spoken letter/word worked
+    and everything after it was silently swallowed, making TTS look "broken"
+    after a few seconds of use.
+
+    Fix: create a fresh pyttsx3.init() engine for every single utterance
+    inside the worker thread, speak with it, then let it be garbage
+    collected. Slightly more overhead per call, but it is the reliable way
+    to use pyttsx3 in a long-running loop.
+    """
+
     def __init__(self):
         if not TTS_AVAILABLE:
             return
-        self._engine = pyttsx3.init()
-        self._engine.setProperty("rate", 160)
         self._queue  = queue.Queue()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -179,8 +156,16 @@ class TTSWorker:
             text = self._queue.get()
             if text is None:
                 break
-            self._engine.say(text)
-            self._engine.runAndWait()
+            try:
+                engine = pyttsx3.init()
+                engine.setProperty("rate", 160)
+                engine.say(text)
+                engine.runAndWait()
+                engine.stop()
+            except Exception as e:
+                # Never let a TTS failure kill the worker thread — just log
+                # and keep listening for the next phrase.
+                print(f"[TTS] Speech failed: {e}")
 
     def speak(self, text: str):
         if TTS_AVAILABLE and self._queue.empty():
@@ -722,23 +707,30 @@ def run_live_detection():
 
                     if frame_good:
                         bad_frame_streak = 0          # reset bad-frame counter
-                        raw_label    = letter_label_map[idx]
-                        smooth_label = smoother.update(raw_label)
-                        current_label = smooth_label.upper()
-                        current_conf  = conf
+                        # Handle cases where model predicts an index not in label_map
+                        if idx not in letter_label_map:
+                            print(f"[WARN] Model predicted index {idx} not in label_map "
+                                  f"(available: {list(letter_label_map.keys())})")
+                            current_label = "-"
+                            current_conf  = 0.0
+                        else:
+                            raw_label    = letter_label_map[idx]
+                            smooth_label = smoother.update(raw_label)
+                            current_label = smooth_label.upper()
+                            current_conf  = conf
 
-                        # Feed to builder — commits when hold_frames stable frames seen
-                        if builder.feed(current_label):
-                            flash_letter = True
-                            flash_frames = 14
-                            flash_phrase = ""
-                            phrase_timer = 0
+                            # Feed to builder — commits when hold_frames stable frames seen
+                            if builder.feed(current_label):
+                                flash_letter = True
+                                flash_frames = 14
+                                flash_phrase = ""
+                                phrase_timer = 0
 
-                        if smooth_label != last_label and \
-                                (now - last_tts_time) > TTS_COOLDOWN_SEC:
-                            tts.speak(smooth_label)
-                            last_label    = smooth_label
-                            last_tts_time = now
+                            if smooth_label != last_label and \
+                                    (now - last_tts_time) > TTS_COOLDOWN_SEC:
+                                tts.speak(smooth_label)
+                                last_label    = smooth_label
+                                last_tts_time = now
                     else:
                         # Bad frame — increment tolerance counter.
                         # KEY FIX: only reset hold after BAD_FRAME_TOLERANCE

@@ -1,0 +1,60 @@
+name: Build and Release Desktop App
+
+# Runs automatically whenever you push a tag like v1.0.0.
+# See README > "Publishing a Release" for the exact commands.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:   # also allows manually triggering a build from the Actions tab
+
+permissions:
+  contents: write   # needed so the workflow can attach files to a Release
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller pyinstaller-hooks-contrib
+
+      - name: Download pretrained models
+        shell: bash
+        run: |
+          pip install huggingface_hub
+          python - <<'PY'
+          from huggingface_hub import hf_hub_download
+          import shutil, os
+
+          os.makedirs("word", exist_ok=True)
+          os.makedirs("sentence", exist_ok=True)
+
+          w = hf_hub_download("shutupmalfoy/isl_letter", "isl_final_model.keras")
+          shutil.copy(w, "word/isl_final_model.keras")
+
+          s = hf_hub_download("shutupmalfoy/isl_sentence", "isl_sentence_model.keras")
+          shutil.copy(s, "sentence/isl_sentence_model.keras")
+          PY
+
+      - name: Build executable
+        run: pyinstaller predict.spec
+
+      - name: Zip build output
+        run: powershell Compress-Archive -Path dist/HandTalk-INDIA/* -DestinationPath HandTalk-INDIA-Windows.zip
+
+      - name: Attach zip to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: HandTalk-INDIA-Windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
