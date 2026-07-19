@@ -24,7 +24,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
+        shell: bash
         run: |
+          set -e
           pip install -r requirements.txt
           pip install pyinstaller pyinstaller-hooks-contrib
 
