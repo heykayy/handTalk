@@ -22,10 +22,14 @@ It runs entirely on CPU and supports two detection modes — letter-by-letter sp
 
 The trained `.keras` model files are **not committed to this repository** because of their size. Download them from Hugging Face and place each one in the folder shown below before running `predict.py`:
 
-| Model | Link | Save to |
-|---|---|---|
-| Letter (word) model | [shutupmalfoy/isl_letter](https://huggingface.co/shutupmalfoy/isl_letter) | `word/isl_final_model.keras` |
-| Sentence model | [shutupmalfoy/isl_sentence](https://huggingface.co/shutupmalfoy/isl_sentence) | `sentence/isl_sentence_model.keras` |
+| Model | Accuracy | Dataset | Link | Save to |
+|---|---|---|---|---|
+| **Letter (word) model** | **99.99%** | 35 classes × 900 imgs (31.5k total) | [shutupmalfoy/isl_letter](https://huggingface.co/shutupmalfoy/isl_letter) | `word/isl_final_model.keras` |
+| **Sentence model** | **84.77%** | 40+ phrases × sequences | [shutupmalfoy/isl_sentence](https://huggingface.co/shutupmalfoy/isl_sentence) | `sentence/isl_sentence_model.keras` |
+
+**Accuracy notes:**
+- **Word model**: 99.99% validation accuracy. Trained on 35 classes (digits 1–9 + letters A–Z) with 900 images per class. Uses two-phase training: classification head (94.06%) → fine-tuned backbone (99.99%).
+- **Sentence model**: 84.77% peak validation accuracy. Trained on 40+ ISL phrases with temporal sequences (45-frame MediaPipe landmarks). More complex task than single-frame letter recognition due to motion variability and smaller dataset.
 
 The label maps (`word/label_map.json` and `sentence/sentence_label_map.json`) are small enough to live directly in this GitHub repo, so no separate download is needed for those — only the two `.keras` model files above have to be pulled from Hugging Face.
 
